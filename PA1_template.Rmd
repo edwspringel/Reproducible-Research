@@ -1,0 +1,180 @@
+---
+title: 'PA_1 template Coursera Reproducible Research Project #1'
+author: "Edward S."
+date: "December 17, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Set Up
+
+```{r Set up}
+library(Hmisc)
+```
+
+
+
+
+# 1A: Code for Reading in the Activity Dataset:
+
+```{r Read in the Data}
+
+if(!file.exists("C:/Users/edwsp/Desktop/repdata%2Fdata%2Factivityactivity.csv")){
+    fileUrl<-"https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip"
+    download.file(fileUrl, 
+    destfile = paste0(getwd(),'/repdata%2Fdata%2Factivity.zip'))
+}
+
+if(!file.exists("activity.csv")){
+      unzip("C:/Users/edwsp/Desktop/repdata%2Fdata%2Factivity/activity.csv")}
+
+A <- read.csv("data/activity.csv", header=TRUE)
+```
+
+#1A: ALternative Read In of Data:
+
+```{r Alternative Read In of Data}
+
+if(!file.exists("(paste0(getwd(),'/repdata%2Fdata%2Factivity.zip')")) {
+        temp <- tempfile()
+        download.file("http://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip",
+                      temp)
+        unzip(temp)
+        unlink(temp)
+}
+
+A<-read.csv("activity.csv")
+```
+
+
+
+#1B: Code for Processing the Data:
+
+```{r Process the Data, results="hide"}
+str(A)
+attach(A)
+```
+
+
+
+#2: Determine the number of Steps per day and Histogram of Total Number of Steps per Day:
+
+```{r Hist of Steps}
+SPD<-tapply(steps, date, sum)
+hist(SPD, main="Steps per Day", col="blue", xlab="Steps per Day")
+```
+
+
+#3. Mean and Median Number of Steps per Day:
+
+```{r Mean and Median Steps}
+summary(SPD)
+```
+
+
+#4. Time Series Plot of Average Number of Steps Taken:
+
+```{r Time Series Plot}
+SPI.t<-tapply(steps, interval, mean, na.rm=TRUE)
+summary(SPI.t)
+plot(as.numeric(names(SPI.t)), SPI.t, type="l", main = "Pattern of Steps per Interval", xlab="Intervals", ylab="Steps", col="blue")
+```
+
+
+
+#5. The 5 Minute Interval that on Average has the Maximum Number of Steps:
+
+```{r Max 5}
+Max.steps<-names(sort(SPI.t, decreasing = TRUE)[1])
+Max.steps
+```
+
+
+
+#6. Code to Describe and Show Strategy to Impute Missing Data:
+I'm simple- I'm just going to impute median number of steps for each interval when there's a missing value.
+
+```{r Imputation, results="hide"}
+sum(is.na(steps))
+(sum(is.na(steps)))/(length(A$steps))
+
+SPI.a<-aggregate(steps, list(interval), mean, na.rm=TRUE)
+colnames(SPI.a)<-c("interval", "SPI")
+B<-merge(A, SPI.a, by="interval", all.x=TRUE)
+B$steps.i<-ifelse(is.na(B$steps), B$SPI, B$steps)
+attach(B)
+```
+
+
+
+#7. Histogram of the Total Number of Steps each Day after Imputation:
+
+```{r Hist after Imputed}
+SPD.i<-tapply(steps.i, date, sum)
+
+hist(SPD.i, main="Steps per Day with and without Imputation", col=rgb(1,0,0,0.5), xlab="Steps per Day") 
+
+legend("topright", c("Imputed", "Non-imputed", "Overlap"), col=c("red", "blue", "purple"), lwd=10)
+
+hist(SPD, main="Steps per Day", col=rgb(0,0,1,0.5), add=TRUE)
+
+SPD.i.mean<-mean(SPD.i)
+SPD.i.median<-median(SPD.i)
+
+SPD.mean<-mean(SPD, na.rm=TRUE)
+SPD.median<-median(SPD, na.rm=TRUE)
+
+Mean.dif<-SPD.i.mean-SPD.mean
+Median.dif<-SPD.i.median-SPD.median
+
+SPD.i.mean
+SPD.i.median
+SPD.mean
+SPD.median
+Mean.dif
+Median.dif
+```
+
+
+
+#8. Panel Plot comparing Average Number of Steps taken per 5 Min Interval across Weekends and Weekdays
+
+```{r Panel Plot}
+library(lattice)
+
+B$Day<-weekdays(as.Date(B$date))
+B$Daytype<-ifelse(((B$Day=="Saturday")|(B$Day=="Sunday")), "Weekend", "Weekday")
+
+
+SPI.i<-aggregate(B$steps.i, list(B$interval), mean, na.rm=TRUE)
+colnames(SPI.i)<-c("interval", "SPI.i")
+C<-merge(B, SPI.i, by="interval", all.x=TRUE)
+
+SPI.i.Wkday<-C[which(C$Daytype=="Weekday"),]
+SPI.i.Wkend<-C[which(C$Daytype=="Weekend"),]
+
+par(mfrow=c(1,2))
+    
+plot(SPI.i.Wkday$interval, SPI.i.Wkday$SPI.i,
+     xlab = "Interval", 
+     ylab = "Steps Imputed", 
+     main = "Pattern of Steps per Interval (Weekdays)", 
+     type = "l",
+     col="blue")
+
+plot(SPI.i.Wkend$interval, SPI.i.Wkend$SPI.i, 
+     xlab = "Interval", 
+     ylab = "Steps Imputed", 
+     main = "Pattern of Steps per Interval (Weekends)", 
+     type = "l",
+     col="red")
+```
+
+
+
+#9. All of the R Code needed to Reproduce the Plots can be found in the above report.
+
